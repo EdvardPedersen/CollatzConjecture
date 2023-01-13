@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <omp.h>
 
-#define N 10000000
+#define N 1000000
 #define CACHE_SIZE N
 #define NUM_THREADS 10
 

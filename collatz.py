@@ -28,6 +28,62 @@ class Collatz:
         return self.checked[n]
 
 # Written by Edvard
+def iterative_collatz(n):
+    iterations = 0
+    while n != 1:
+        iterations += 1
+        if n % 2 == 0:
+            n = n // 2
+        else:
+            n = (n*3)+1
+    return iterations
+
+class MemoizedIterative:
+    def __init__(self):
+        self.cache = {}
+
+    def collatz(self, n):
+        iterations = 0
+        temp_cache = {n: 0}
+        while n != 1:
+            if n in self.cache:
+                for num in temp_cache:
+                    self.cache[num] = (iterations - temp_cache[num]) + self.cache[n]
+                return self.cache[n] + iterations
+            iterations += 1
+            if n % 2 == 0:
+                n = n // 2
+            else:
+                n = (n*3)+1
+            temp_cache[n] = iterations
+        for num in temp_cache:
+            self.cache[num] = iterations - temp_cache[num]
+        return iterations
+
+# Written by Edvard
+class ArrayCollatz:
+    def __init__(self, cache_size=1_000_000):
+        self.cache = []
+        for i in range(cache_size):
+            self.cache.append(0)
+        self.cache_size = cache_size
+
+    def collatz(self, n):
+        if n >= self.cache_size:
+            if n % 2 == 0:
+                return self.collatz(n//2) + 1
+            return self.collatz(3*n+1) + 1
+        if self.cache[n] != 0:
+            return self.cache[n]
+        if n < 2:
+            return 0
+        if n % 2 == 0:
+            self.cache[n] = self.collatz(n//2) + 1
+            return self.cache[n]
+        self.cache[n] =  self.collatz(3*n+1) + 1
+        return self.cache[n]
+
+# Written by Edvard
 @functools.cache
 def collatz(n):
     if n < 2:
@@ -80,42 +136,28 @@ def many_collatz(start, end, array):
     for i in range(start, end):
         array[i] = collatz(i)
 
+def benchmark_algorithm(function, description):
+    start = time.time()
+    result = {}
+    for n in range(1, N):
+        result[n] = function(n)
+    end = round((time.time()-start), 3)
+    print(f"{description}: Calculated {N} values of collatz in {end} seconds")
+
 if __name__ == "__main__":
-    start = time.time()
-    result = {}
-    for n in range(1, N):
-        result[n] = default_collatz(n)
-    print("DEFAULT: Calculated", f"{Decimal(N):.1E}", "values of collatz in", round((time.time()-start), 3), "seconds.")
-
+    benchmark_algorithm(default_collatz, "Default recursive")
+    benchmark_algorithm(iterative_collatz, "Default iterative")
+    c = MemoizedIterative()
+    benchmark_algorithm(c.collatz, "Memoized iterative")
     c = Collatz()
-    start = time.time()
-    for n in range(1, N):
-        c.collatz(n)
-    print("HENKEBAZZ: Calculated", f"{Decimal(N):.1E}", "values of collatz in", round((time.time()-start), 3), "seconds.")
+    benchmark_algorithm(c.collatz, "Class-based memoization")
+    c = ArrayCollatz()
+    benchmark_algorithm(c.collatz, "Class-based cache")
+    benchmark_algorithm(collatz, "Functools-based memoization")
+    benchmark_algorithm(gpt_collatz, "ChatGPT memoization")
+    benchmark_algorithm(gpt_ocollatz, "\"Optimized\" ChatGPT memoization")
+    benchmark_algorithm(gpt_ocollatz2, "Even more \"optimized\" ChatGPT memoization")
 
-    start = time.time()
-    result = {}
-    for n in range(1, N):
-        result[n] = collatz(n)
-    print("EDVARD: Calculated", f"{Decimal(N):.1E}", "values of collatz in", round((time.time()-start), 3), "seconds.")
-
-    start = time.time()
-    result = {}
-    for n in range(1, N):
-        result[n] = gpt_collatz(n)
-    print("ChatGPT: Calculated", f"{Decimal(N):.1E}", "values of collatz in", round((time.time()-start), 3), "seconds.")
-
-    start = time.time()
-    result = {}
-    for n in range(1, N):
-        result[n] = gpt_ocollatz(n)
-    print("ChatGPT optimized: Calculated", f"{Decimal(N):.1E}", "values of collatz in", round((time.time()-start), 3), "seconds.")
-
-    start = time.time()
-    result = {}
-    for n in range(1, N):
-        result[n] = gpt_ocollatz2(n)
-    print("ChatGPT optimized: Calculated", f"{Decimal(N):.1E}", "values of collatz in", round((time.time()-start), 3), "seconds.")
 
     start = time.time()
     result = Array('i', N+1, lock=False)
@@ -125,4 +167,4 @@ if __name__ == "__main__":
         processes[-1].start()
     for p in processes:
         p.join()
-    print("MPMAN: Calculated", f"{Decimal(N):.1E}", "values of collatz in", round((time.time()-start), 3), "seconds.")
+    print("Multiprocessing-based: Calculated", f"{Decimal(N):.1E}", "values of collatz in", round((time.time()-start), 3), "seconds.")
